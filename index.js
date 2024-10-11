@@ -94,11 +94,12 @@ app.put('/videos/:id', async (req, res) => {
 // Serve files from the 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
 // Use imported routes
 app.use('/api/users', userRoutes);
 app.use('/api', countRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api', ProfileRoutes);
+app.use('/api',require('./routes/ProfileRoutes'));
 // Use the tutorial routes
 app.use('/api/tutorials', TutorialRoutes);
 

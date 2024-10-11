@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // Ensure this is hashed in production
   isAdmin: { type: Boolean, default: false },
-  
+
   // Customer personal details
   phone: { type: String, required: false },
   address: {
@@ -14,6 +14,9 @@ const userSchema = new mongoose.Schema({
     state: { type: String, required: false },
     zipCode: { type: String, required: false }
   },
+  profilePicture: { type: String, required: false },
+
+  // Preferences
   preferences: {
     meditationLevel: { type: String, required: false }, // Beginner, Intermediate, Advanced
     preferredLanguage: { type: String, required: false }, // e.g., English, Hindi
@@ -25,7 +28,7 @@ const userSchema = new mongoose.Schema({
     status: { type: String, required: true, default: 'inactive' }, // Active, Inactive, etc.
     startDate: { type: Date, required: false },
     endDate: { type: Date, required: false },
-  }
+  },
 });
 
 const User = mongoose.model('User', userSchema);

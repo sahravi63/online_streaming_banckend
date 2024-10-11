@@ -11,13 +11,16 @@ const upload = multer({ dest: 'uploads/videos/' }); // Destination for uploaded 
 
 // Upload Video Endpoint
 router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }, { name: 'poster' }]), async (req, res) => {
-  const { title, session } = req.body;
+  const { title, session } = req.body; // Extract session from request body
+  
+  // Default to 'General' if no session is provided
+  const videoSession = session ? session : 'General'; 
 
   // Define the base path for videos
   const basePath = 'uploads/videos/';
 
-  // Create the upload directory
-  const uploadDir = session ? path.join(basePath, session) : basePath;
+  // Create the upload directory for the session, or use the default
+  const uploadDir = path.join(basePath, videoSession);
   fs.mkdirSync(uploadDir, { recursive: true });
 
   const videoFile = req.files.video[0];
@@ -25,7 +28,7 @@ router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }
 
   // Move video to the appropriate directory
   const videoPath = path.join(uploadDir, videoFile.originalname);
-  fs.renameSync(videoFile.path, videoPath); // Move the uploaded video file
+  fs.renameSync(videoFile.path, videoPath);
 
   let posterPath = null;
   if (posterFile) {
@@ -39,8 +42,8 @@ router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }
     title,
     path: videoPath.replace(/\\/g, '/'), // Ensure the path uses forward slashes
     poster: posterPath ? posterPath.replace(/\\/g, '/') : null,
-    sessions: session ? [session] : [], // Store session names in an array
-    uploadedBy: req.user ? req.user._id : null, // Assuming you have user authentication
+    session: videoSession, // Set session to either provided or defaulted 'General'
+    uploadedBy: req.user ? req.user._id : null, // Assuming user authentication
   });
 
   try {
@@ -53,6 +56,7 @@ router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }
 });
 
 
+
 // Video Library Endpoint
 router.get('/video-library', authenticateToken, async (req, res) => {
   try {
@@ -62,11 +66,22 @@ router.get('/video-library', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'No videos found.' });
     }
 
-    res.status(200).json(videos); // Return the video library
+    // Group videos by session
+    const sessions = videos.reduce((acc, video) => {
+      const session = video.session || 'General'; // Default to 'General' if no session exists
+      if (!acc[session]) {
+        acc[session] = [];
+      }
+      acc[session].push(video);
+      return acc;
+    }, {});
+
+    res.status(200).json(sessions); // Return grouped video data
   } catch (error) {
-    console.error('Error fetching video library:', error); // Log the error for debugging
+    console.error('Error fetching video library:', error);
     res.status(500).json({ message: 'Error fetching video library', error: error.message });
   }
 });
+
 
 module.exports = router;
