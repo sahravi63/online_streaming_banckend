@@ -1,4 +1,3 @@
-// routes/video.js
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -11,7 +10,7 @@ const upload = multer({ dest: 'uploads/videos/' }); // Destination for uploaded 
 
 // Upload Video Endpoint
 router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }, { name: 'poster' }]), async (req, res) => {
-  const { title, session } = req.body; // Extract session from request body
+  const { title, session, price } = req.body; // Extract session and price from request body
   
   // Default to 'General' if no session is provided
   const videoSession = session ? session : 'General'; 
@@ -44,6 +43,7 @@ router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }
     poster: posterPath ? posterPath.replace(/\\/g, '/') : null,
     session: videoSession, // Set session to either provided or defaulted 'General'
     uploadedBy: req.user ? req.user._id : null, // Assuming user authentication
+    price: price ? parseFloat(price) : 0, // Parse price, default to 0 if not provided
   });
 
   try {
@@ -55,33 +55,31 @@ router.post('/upload-video', authenticateToken, upload.fields([{ name: 'video' }
   }
 });
 
-
-
-// Video Library Endpoint
+// Video Library Endpoint (same as before)
 router.get('/video-library', authenticateToken, async (req, res) => {
   try {
-    const videos = await Video.find({}).select('-__v'); // Exclude the __v field from the response
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Check if the user has an active subscription
+    const currentDate = new Date();
+    const subscription = user.subscriptions;
+
+    if (!subscription || subscription.status !== 'Active' || subscription.endDate < currentDate) {
+      return res.status(403).json({ message: 'Your subscription is inactive or has expired.' });
+    }
+
+    const videos = await Video.find({}).select('-__v'); // Exclude __v field
 
     if (!videos.length) {
       return res.status(404).json({ message: 'No videos found.' });
     }
 
-    // Group videos by session
-    const sessions = videos.reduce((acc, video) => {
-      const session = video.session || 'General'; // Default to 'General' if no session exists
-      if (!acc[session]) {
-        acc[session] = [];
-      }
-      acc[session].push(video);
-      return acc;
-    }, {});
-
-    res.status(200).json(sessions); // Return grouped video data
+    res.status(200).json({ videos, isSubscribed: true }); // Send subscription status
   } catch (error) {
     console.error('Error fetching video library:', error);
     res.status(500).json({ message: 'Error fetching video library', error: error.message });
   }
 });
-
 
 module.exports = router;

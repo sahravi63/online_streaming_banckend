@@ -18,26 +18,40 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const { body, validationResult } = require('express-validator');
+
 // Upload Meditation Tutorial Step (Local File Storage)
-router.post('/upload-tutorial', upload.single('media'), async (req, res) => {
-  const { title, description, order } = req.body;
+router.post('/upload-tutorial', 
+  upload.single('media'), 
+  [
+    body('title').notEmpty().withMessage('Title is required'),
+    body('order').isInt().withMessage('Order must be an integer'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  // Create a new tutorial step with local media file path
-  const tutorialStep = new TutorialStep({
-    title,
-    description,
-    mediaUrl: req.file ? req.file.path : null, // Store the local file path
-    order,
-  });
+    const { title, description, order } = req.body;
 
-  try {
-    await tutorialStep.save();
-    res.status(201).json({ message: 'Tutorial step uploaded successfully', tutorialStep });
-  } catch (error) {
-    console.error('Error saving tutorial step:', error);
-    res.status(500).json({ message: 'Error saving tutorial step', error });
-  }
+    // Create a new tutorial step with local media file path
+    const tutorialStep = new TutorialStep({
+      title,
+      description,
+      mediaUrl: req.file ? req.file.path : null, // Store the local file path
+      order,
+    });
+
+    try {
+      await tutorialStep.save();
+      res.status(201).json({ message: 'Tutorial step uploaded successfully', tutorialStep });
+    } catch (error) {
+      console.error('Error saving tutorial step:', error);
+      res.status(500).json({ message: 'Error saving tutorial step', error });
+    }
 });
+
 
 // Get all Tutorial Steps
 router.get('/tutorial-steps', async (req, res) => {
