@@ -20,6 +20,8 @@ const TutorialRoutes = require('./routes/TutorialRoutes');
 
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const razorpayRoute = require('./routes/paymentRoutes'); 
+
 const adminAuthenticate = require('./middleware/adminAuthenticate');
 const authenticateToken = require('./middleware/authenticateToken');
 
@@ -107,6 +109,7 @@ app.use('/api/tutorials', TutorialRoutes);
 app.use('/api', adminAuthenticate);
 app.use('/api/admin', adminRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api/create-razorpay-order',razorpayRoute);
 
 // Start the server
 app.listen(5000, () => console.log('Server running on port 5000'));

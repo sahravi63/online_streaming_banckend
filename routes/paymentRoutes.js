@@ -1,40 +1,35 @@
 const express = require('express');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Set your Stripe secret key
-const authenticateToken = require('../middleware/authenticateToken');
+const Razorpay = require('razorpay');
+const authenticateToken = require('../middleware/authenticateToken'); // Import your middleware
 
 const router = express.Router();
 
-// Create Checkout Session
-router.post('/create-checkout-session', authenticateToken, async (req, res) => {
-  const { sessionId } = req.body;
+// Create Razorpay instance
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
-  if (!sessionId) {
-    return res.status(400).json({ error: 'Session ID is required' });
+// Create Razorpay order
+router.post('/create-razorpay-order', authenticateToken, async (req, res) => {
+  const { sessionName, amount, currency, receipt } = req.body;
+
+  if (!sessionName || !amount || !currency || !receipt) {
+    return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: 'Yoga Session Subscription',
-            description: 'Subscribe to the yoga session.',
-          },
-          unit_amount: 5000, // Price in cents ($50)
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      success_url: 'http://localhost:3000/success',
-      cancel_url: 'http://localhost:3000/cancel',
-    });
+    const options = {
+      amount,
+      currency,
+      receipt,
+    };
 
-    res.json({ id: session.id });
+    const order = await razorpay.orders.create(options);
+    res.status(201).json({ orderId: order.id, amount });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ error: 'Error creating checkout session' });
+    console.error('Error creating Razorpay order:', error);
+    res.status(500).json({ message: 'Error creating Razorpay order', error: error.message });
   }
 });
 
